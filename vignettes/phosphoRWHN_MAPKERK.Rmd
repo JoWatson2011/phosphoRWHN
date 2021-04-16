@@ -1,0 +1,118 @@
+---
+title: "phosphoRWHN_MAPKERK"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{phosphoRWHN_MAPKERK}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(phosphoRWHN)
+library(tidyverse)
+```
+#PhosphoRWHN
+Phosphoproteomics data ....
+PhosphoRWHN addresses the problem, by providing a systems level analysis method for assigning potential functions to phosphorylated sites. Our manuscript on this work is described [here](www.biorxiv.com)
+
+
+## Data Preparation
+
+Any phosphorpteomics dataset can be used. The user may wish to filter the data first to remove "unregulated" or "insignificant" sites. However, as a systems-level analysis, the algorithm performs best on data describing different phosphorylation profile, so use all of your filtered data even if you intend to only look at individual sites or clusters in the end
+
+From the phosphoproteomics dataset, we need at least three variables:
+* HGNC symbol
+* Modified Amino Acid (S, T, Y)
+* Amino acid position
+
+These need to be concatenated into the form HGNC_AminoAcid+Position (e.g. MAPK1_T185) to create an identifier that is parsed by the algorithm.
+
+
+We can use the quantitative data to cluster the sites prior to running RWHN
+
+```{r}
+model <- read.csv(
+  system.file("extdata", "model_phospho.csv", package = "phosphoRWHN", mustWork = T)
+) 
+model
+
+model <- model %>% 
+  mutate(id = paste0(prot, "_", site)) %>% 
+  select(id, t1:t5)
+
+model
+```
+
+In this case we are going to use the `mfuzz()` function from the *Mfuzz* package to cluster the data. The data can be clustered in any way. A discussion on clustering methods for phosphoproteomicscan be found [here](www.google.com)
+```{r}
+library(Mfuzz)
+
+set.seed(1)
+inputdata <- model %>% 
+    tibble::remove_rownames() %>%
+    tibble::column_to_rownames(var = "id") 
+phospep <- new("ExpressionSet", 
+               exprs = as.matrix(inputdata))
+phospep.z <- standardise(phospep)      #Avg expression of each peptide = 0, sd = 1
+optimalM <- mestimate(phospep.z)   #set fuzzifier
+cl <- mfuzz(phospep.z, c = 5, m = optimalM)
+
+cl$cluster
+```
+
+The variable cl$cluster is the input for phosphoRWHN.
+
+## Running the pipeline
+
+The package has three functions that, run sequentially, form the analysis pipeline.
+1. Construct the heterogeneous network - `constructHetNet()`
+2. Run RWHN - `calculateRWHN()`
+3. Filter & visualise - `heatmap_RWHN()`
+
+### Construct the heterogeneous network
+The function `constructHetNet` takes several parameters which are detailed in the documentation. Parameters without default parameters are:
+* `clustering` - in our case, cl$cluster
+* `phosphoData` - this is optional, and is used to trim edges in the phospho-layer of the network. In this case we use our processed *model* data frame.
+
+The output is a list containing the edgelists and vertices of the multilayer network.
+
+```{r echo = F}
+set.seed(1)
+# 1. Construct the heterogeneous network
+hetNet <- constructHetNet(clustering = cl$cluster, modules = F)
+
+# 2. Run RWHN, using sites in each cluster as seeds
+seed_l <- lapply(1:max(cl$cluster), function(i){
+  c(names(cl$cluster[cl$cluster == i]))
+})
+
+rwhn <- lapply(seed_l, function(s){
+  calculateRWHN(hetNet = hetNet,
+                seeds = s, 
+                transitionProb = 0.7, 
+                restart = 0.7,
+                eta_xy =  0.3,
+                eta_yz = 0.7,
+                 eps = 1/10^12
+                )
+})
+
+# 3. Filter output & visualise
+sighm <-
+  heatmap_RWHN(rwhn,
+               database = "GOBP",
+               colours = c(low = "#ffe6e8", high = "#f74451"))
+
+sighm
+
+overrepresentationAnalysis(clustering = cl$cluster, vis = T)
+```
+
+
