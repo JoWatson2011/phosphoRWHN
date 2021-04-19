@@ -89,7 +89,7 @@ constructHetNet <- function(clustering, phosphoData = NULL,
 
 
   STRING_api_interactors <-
-    httr::POST("https://version-11-0.string-db.org/api/tsv/interaction_partners",
+    httr::POST("https://version-11-0b.string-db.org/api/tsv/interaction_partners",
                        body = list(
                          identifiers = paste(prots, collapse = "%0d"),
                          required_score = 1,
@@ -107,10 +107,12 @@ constructHetNet <- function(clustering, phosphoData = NULL,
     )
   }
 
-  STRING_api_interactors <- suppressMessages(httr::content(STRING_api_interactors)) %>%
+  STRING_api_interactors <- suppressMessages(
+    httr::content(STRING_api_interactors) %>%
     dplyr::filter(.data$escore >= stringConf)
+  )
 
-  STRING_api_nw <- httr::POST("https://version-11-0.string-db.org/api/tsv/network",
+  STRING_api_nw <- httr::POST("https://version-11-0b.string-db.org/api/tsv/network",
                               body = list(
                                 identifiers = paste(c(prots,
                                                       unique(STRING_api_interactors$preferredName_B )
