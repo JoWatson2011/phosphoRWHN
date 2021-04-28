@@ -14,7 +14,7 @@
 #' @importFrom stats cor na.omit
 #' @importFrom tidyr pivot_longer separate separate_rows
 #' @importFrom igraph graph_from_data_frame simplify as_data_frame cluster_louvain membership
-#' @importFrom httr POST content http_error
+#' @importFrom httr POST content http_error status_code
 #' @importFrom GOSemSim godata goSim
 #' @importFrom purrr pluck
 #' @importFrom AnnotationDbi select
@@ -68,7 +68,6 @@ constructHetNet <- function(clustering, phosphoData = NULL,
     igraph::graph_from_data_frame(directed = F) %>%
     igraph::simplify() %>%
     igraph::as_data_frame(what = "edges") %>%
-    #CHECKTHIS
     dplyr::select(phos1 = .data$from, phos2 = .data$to)
 
   ## Phospho >> Prot
@@ -101,7 +100,7 @@ constructHetNet <- function(clustering, phosphoData = NULL,
     stop(
       sprintf(
         "STRING API request failed [%s]",
-        status_code(STRING_api_post)
+        httr::status_code(STRING_api_interactors)
       ),
       call. = F
     )
@@ -112,30 +111,53 @@ constructHetNet <- function(clustering, phosphoData = NULL,
     dplyr::filter(.data$escore >= stringConf)
   )
 
-  STRING_api_nw <- httr::POST("https://version-11-0b.string-db.org/api/tsv/network",
-                              body = list(
-                                identifiers = paste(c(prots,
-                                                      unique(STRING_api_interactors$preferredName_B )
-                                ),
-                                collapse = "%0d"
-                                ),
-                                required_score = 1,
-                                species = "9606"
-                              )
-  )
+  query_size <- 1999 - length(prots)
 
-  if (httr::http_error(STRING_api_nw)) {
-    stop(
-      sprintf(
-        "STRING API request failed [%s]",
-        status_code(STRING_api_post)
+  STRING_api_interactors$group <- c(
+      as.vector(
+        sapply(
+          seq(query_size, nrow(STRING_api_interactors) - nrow(STRING_api_interactors) %% query_size, query_size),
+          rep.int, times = query_size
+        )
       ),
-      call. = F
+      rep.int(nrow(STRING_api_interactors), times = nrow(STRING_api_interactors) %% query_size)
     )
-  }
 
 
-  prot <- suppressMessages(httr::content(STRING_api_nw)) %>%
+    STRING_api_nw <- lapply(
+      unique(STRING_api_interactors$group), function(i){
+        interactors <- STRING_api_interactors[STRING_api_interactors$group == i,]$preferredName_B
+
+        STRING_api_nw_part <- httr::POST("https://version-11-0b.string-db.org/api/tsv/network",
+                                    body = list(
+                                      identifiers = paste(c(prots,
+                                                            interactors),
+                                      collapse = "%0d"
+                                      ),
+                                      required_score = 1,
+                                      species = "9606"
+                                    )
+        )
+        Sys.sleep(1)
+        if (httr::http_error(STRING_api_nw_part)) {
+          stop(
+            sprintf(
+              "STRING API request failed [%s]",
+              httr::status_code(STRING_api_nw_part)
+            ),
+            call. = F
+          )
+        }
+
+        STRING_api_nw_part <- suppressMessages(httr::content(STRING_api_nw_part))
+
+        return(STRING_api_nw_part)
+    }) %>%
+      dplyr::bind_rows() %>%
+      unique()
+
+
+  prot <- STRING_api_nw %>%
     dplyr::filter(.data$escore >= stringConf) %>%
     dplyr::select(.data$preferredName_A, .data$preferredName_B) %>%
     na.omit() %>%
@@ -186,10 +208,6 @@ constructHetNet <- function(clustering, phosphoData = NULL,
       }
     }) %>% dplyr::bind_rows()
   } else{
-    # enrichedTerms <- enrichR::enrichr(c(prots), databases = enrichrLib) %>%
-    #   purrr::pluck(1) %>%
-    #   dplyr::filter(.data$Adjusted.P.value < pval)
-
     enrichedTerms <- getEnrichr(unique(c(prot$prot1, prot$prot2)),
                                 enrichrLib = enrichrLib,
                                 pval = pval)
