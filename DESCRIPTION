@@ -1,12 +1,12 @@
 Package: phosphoRWHN
-Title: What the Package Does (One Line, Title Case)
+Title: Random Walk on Heterogeneous Network For Functional Analysis of Phosphoproteomics Data
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Jo",
+           family = "Watson",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           email = "joanne.watson@manchester.ac.uk",
+           comment = c(ORCID = "https://orcid.org/0000-0002-7754-276X"))
 Description: What the package does (one paragraph).
 License: MIT + file LICENSE
 Encoding: UTF-8

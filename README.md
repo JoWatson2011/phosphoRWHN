@@ -3,8 +3,10 @@ A method to infer the function of individual phosphorylation sites based on phos
 
 # To install package
 
-Run the following:
+Run the following in an R session:
 `devtools::install_github("JoWatson2011/phosphoRWHN")`
+
+The [Bioconductor](https://www.Bioconductor.org) packages `org.Hs.eg.db`, `GOSemSim`, `GO.db`, `AnnotationDbi` are also required and may need installing separately.
 
 
 ![Figure 1](https://raw.githubusercontent.com/JoWatson2011/RWHN_Phosphoproteomics/master/figure/Figure1.png?raw=true "Title")
