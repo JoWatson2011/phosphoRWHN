@@ -113,15 +113,21 @@ constructHetNet <- function(clustering, phosphoData = NULL,
 
   query_size <- 1999 - length(prots)
 
-  STRING_api_interactors$group <- c(
-      as.vector(
+  STRING_api_interactors$group <- if(nrow(STRING_api_interactors) > 1999){ # Max. queries to STRING api = 2000
+    c(                                                                     # Split df into groups of 1999
+      as.vector(                                                           #    to be queried separately
         sapply(
-          seq(query_size, nrow(STRING_api_interactors) - nrow(STRING_api_interactors) %% query_size, query_size),
+          seq(query_size, nrow(STRING_api_interactors) -
+                (nrow(STRING_api_interactors) %% 1991), query_size),
           rep.int, times = query_size
         )
       ),
       rep.int(nrow(STRING_api_interactors), times = nrow(STRING_api_interactors) %% query_size)
     )
+  } else {
+    rep(1, nrow(STRING_api_interactors))
+
+  }
 
 
     STRING_api_nw <- lapply(
