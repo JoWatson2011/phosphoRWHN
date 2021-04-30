@@ -214,7 +214,7 @@ constructHetNet <- function(clustering, phosphoData = NULL,
       }
     }) %>% dplyr::bind_rows()
   } else{
-    enrichedTerms <- getEnrichr(unique(c(prot$prot1, prot$prot2)),
+    enrichedTerms <- getEnrichr(unique(prots),
                                 enrichrLib = enrichrLib,
                                 pval = pval)
   }
