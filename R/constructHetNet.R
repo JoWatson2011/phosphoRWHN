@@ -107,9 +107,22 @@ constructHetNet <- function(clustering, phosphoData = NULL,
   }
 
   STRING_api_interactors <- suppressMessages(
-    httr::content(STRING_api_interactors) %>%
-    dplyr::filter(.data$escore >= stringConf)
+    httr::content(STRING_api_interactors)
   )
+  if(nrow(dplyr::filter(STRING_api_interactors,
+                        .data$escore >= stringConf)) > 0){
+    STRING_api_interactors <- dplyr::filter(STRING_api_interactors,
+                                            .data$escore >= stringConf)
+  }else{
+    stop(sprintf(
+      "No PPI interactions at STRING confidence score %s. Set confidence score lower.",
+      httr::status_code(STRING_api_interactors)
+    ),
+    call. = F
+    )
+  }
+
+
 
   query_size <- 1999 - length(prots)
 
