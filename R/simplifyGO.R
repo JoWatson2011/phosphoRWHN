@@ -5,17 +5,17 @@
 #'
 #' @param GOID
 #' @param simplifyData
-#'
+#' @import GO.db
 #' @return
 #'
 #' @examples
-simplifyGO <- function(GOID, simplifyData) {
+simplifyGO <- function(GOID, highFreqTerms, semData) {
   semSim <- expand.grid(unique(GOID),
                         unique(GOID), stringsAsFactors = F) %>%
     dplyr::filter(.data$Var1 != .data$Var2)
   semSim$sim <-
     apply(semSim, 1, function(i)
-      GOSemSim::goSim(i[1], i[2], semData = simplifyData$semData, measure = "Wang"))
+      GOSemSim::goSim(i[1], i[2], semData = semData, measure = "Wang"))
 
   semSim[is.na(semSim)] <- 0
   semSim <- semSim[!is.na(semSim$sim), ]
@@ -28,10 +28,10 @@ simplifyGO <- function(GOID, simplifyData) {
 
   #mark high fequency terms
   semSim$remove <- apply(semSim, 1, function(x) {
-    if (x[1] %in% simplifyData$highFreqTerms) {
+    if (x[1] %in% highFreqTerms) {
       return(x[1])
     }
-    if (x[2] %in% simplifyData$highFreqTerms) {
+    if (x[2] %in% highFreqTerms) {
       return(x[2])
     } else {
       return(NA)
@@ -46,10 +46,10 @@ simplifyGO <- function(GOID, simplifyData) {
     for (i in 1:nrow(semSim)) {
       Var1 <- semSim[i, "Var1"]
       Var2 <- semSim[i, "Var2"]
-      if (Var2 %in% simplifyData$childTerms[[Var1]]) {
+      if (Var2 %in% as.list(GOBPCHILDREN)[[Var1]]) {
         remove <- c(remove, Var2)
         next
-      } else if (Var1 %in% simplifyData$childTerms[[Var2]])
+      } else if (Var1 %in% as.list(GOBPCHILDREN)[[Var2]])
         remove <- c(remove, Var1)
       next
     }
