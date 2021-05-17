@@ -57,7 +57,7 @@ getEnrichr <- function(genes, enrichrLib, pval) {
     )
 
   if(nrow(enriched) > 0){
-    enriched <- dplyr::filter(enriched, .data$Adjusted.P.value < pval)
+    enriched <- dplyr::filter(enriched, .data$Adjusted.P.value <= pval)
   }
 
   return(enriched)
