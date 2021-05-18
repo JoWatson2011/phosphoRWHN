@@ -32,7 +32,8 @@ calculateRWHN <- function(hetNet,
                           eta_xy,
                           eta_yz,
                           eps = 1 / 10 ^ 6,
-                          random = F) {
+                          random = F,
+                          filterFunctions = T) {
 
   if(class(hetNet) != "list" & all(names(hetNet) %in% c("v", "edgelists"))){
     stop("hetNet must be output from constructHetNet()")
@@ -125,9 +126,12 @@ calculateRWHN <- function(hetNet,
     eta_yz = eta_yz,
     seeds = seeds,
     eps = eps
-  ) %>%
+  )
+
+  if(filterFunctions){
     dplyr::filter(.data$name %in% vertices[vertices$layer == "func", ]$v) %>%
     dplyr::mutate(rank = 1:n())
+  }
 
   return(rwhn)
 }

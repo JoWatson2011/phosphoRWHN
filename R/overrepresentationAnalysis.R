@@ -55,7 +55,22 @@ overrepresentationAnalysis <- function(clustering,
                                 function(i){
       df <- enrichedTerms[enrichedTerms$cluster == i,]
 
-      keepID <- simplifyGO(GOID = df$GOID, simplifyData = simpleGO)
+      hsGO <- suppressMessages(
+        GOSemSim::godata('org.Hs.eg.db',
+                         ont = ifelse(
+                           grepl("Biological", enrichrLib),
+                           "BP",
+                           ifelse(grepl("Molecular", enrichrLib), "MF",
+                                  ifelse(grepl(
+                                    "Cellular", enrichrLib
+                                  ), "CC",
+                                  NA))
+                         ),
+                         computeIC=FALSE
+        )
+      )
+
+      keepID <- simplifyGO(GOID = df$GOID, highFreqTerms, hsGO)
 
       df_flt <- df %>%
         dplyr::filter(.data$GOID %in% keepID) %>%
