@@ -17,7 +17,7 @@
 #' @param removeCommon logical; if rwhn_output is a list, remove functions ranked at the same position in all cases. This is useful for removing noise.
 #'
 #' @importFrom stats reorder
-#' @importFrom igraph bipartite.mapping graph_from_data_frame simplify graph_from_adjacency_matrix get.adjacency graph_from_incidence_matrix get.incidence
+#' @importFrom igraph bipartite.mapping graph_from_data_frame simplify graph_from_adjacency_matrix get.adjacency graph_from_incidence_matrix get.incidence rewire each_edge
 #' @importFrom magrittr `%>%`
 #' @importFrom dplyr filter mutate group_by arrange desc ungroup group_split bind_rows n
 #' @importFrom ggplot2 ggplot aes geom_tile scale_fill_gradient scale_x_discrete guides guide_colourbar xlab ylab theme  margin element_blank element_rect element_text unit
@@ -48,16 +48,7 @@ calculateRWHN <- function(hetNet,
       igraph::simplify()
 
     if (random) {
-      names <- unique(c(i$from, i$to))
-      adj <- matrix(
-        data = sample.int(2,
-                          length(names) * length(names),
-                          TRUE),
-        nrow = length(names),
-        ncol = length(names),
-        dimnames = list(names, names)
-      )
-      randomnw <- igraph::graph_from_adjacency_matrix(adj)
+      randomnw <- igraph::rewire(nw, each_edge(1))
       mat <- igraph::get.adjacency(randomnw, sparse = T)
     } else{
       mat <- igraph::get.adjacency(nw, sparse = T)
@@ -66,7 +57,7 @@ calculateRWHN <- function(hetNet,
   })
 
   intra_el <-
-    lapply(edgelists[c("xy", "yx", "yz", "zy")], function(i) {
+    lapply(edgelists[c("xy", "yz")], function(i) {
       nw <- i %>%
         igraph::graph_from_data_frame(directed = F) %>%
         igraph::simplify()
@@ -74,23 +65,36 @@ calculateRWHN <- function(hetNet,
 
       if (bimap[[1]] == T) {
         if (random) {
-          incd <- matrix(
-            data = sample.int(2,
-                              length(unique(i$from)) * length(unique(i$to)),
-                              TRUE),
-            nrow = length(unique(i$from)),
-            ncol = length(unique(i$to)),
-            dimnames = list(unique(i$from), unique(i$to))
-          )
-          randomnw <- igraph::graph_from_incidence_matrix(incd)
-          bimap_random <- igraph::bipartite.mapping(randomnw)
-          mat <- igraph::get.incidence(
+          dat <- as_data_frame(nw)
+          dat$to <- sample(dat$to, nrow(dat), F)
+          randomnw <- graph_from_data_frame(dat,
+                                            directed = F,
+                                            vertices = data.frame(
+                                              name = c(unique(i$from),
+                                                       unique(i$to))
+                                            )
+                                            )
+          bimap_random <- bipartite.mapping(randomnw)
+          mat <- get.incidence(
             randomnw,
-            types = bimap_random$type,
-            attr = NULL,
-            names = TRUE,
-            sparse = T
-          )
+            types= bimap_random$type,
+            attr=NULL,
+            names=TRUE,
+            sparse=T
+            )
+          # #randomnw <- igraph::rewire(nw, each_edge(1))
+          # dat <- as_data_frame(nw)
+          # dat$to <- sample(unique(dat$to), size = nrow(dat),replace = T)
+          # random_nw <- graph_from_data_frame(dat, directed = F)
+          #
+          # bimap_random <- igraph::bipartite.mapping(randomnw)
+          # mat <- igraph::get.incidence(
+          #   randomnw,
+          #   types = bimap_random$type,
+          #   attr = NULL,
+          #   names = TRUE,
+          #   sparse = T
+          # )
         } else{
           mat <- igraph::get.incidence(
             nw,
@@ -103,6 +107,8 @@ calculateRWHN <- function(hetNet,
       }
       return(as.matrix(mat))
     })
+  intra_el <- c(intra_el,
+                lapply(intra_el, t))
 
   heterogenousNetwork <- c(inter_el, intra_el)
 
