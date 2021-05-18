@@ -129,6 +129,7 @@ calculateRWHN <- function(hetNet,
   )
 
   if(filterFunctions){
+    rwhn <- rwhn %>%
     dplyr::filter(.data$name %in% vertices[vertices$layer == "func", ]$v) %>%
     dplyr::mutate(rank = 1:n())
   }
