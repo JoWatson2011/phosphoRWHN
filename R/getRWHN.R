@@ -14,6 +14,7 @@
 #' @param rwhn_output output of calculateRWHN() (or getRWHN())
 #' @param database character; name of annotation database
 #' @param colours character vector of length 2 with colours for scale
+#' @param pct_cutoff numeric, default 0.05; top terms to be included in results output, as percentage.
 #' @param removeCommon logical; if rwhn_output is a list, remove functions ranked at the same position in all cases. This is useful for removing noise.
 #'
 #' @importFrom stats reorder
@@ -281,7 +282,8 @@ heatmap_RWHN <- function(rwhn_output,
                          database = "",
                          colours = c(low = "#e6e4f8",
                                      high = "#46009e"),
-                         removeCommon = T) {
+                         removeCommon = T,
+                         pct_cutoff = 0.05) {
   if (class(rwhn_output) == "list") {
     if (is.null(names(rwhn_output))) {
       loop <- 1:length(rwhn_output)
@@ -324,7 +326,7 @@ heatmap_RWHN <- function(rwhn_output,
           df <- i[1, ]
           if (nrow(i) > 1) {
             for (x in 2:nrow(i)) {
-              if (pct < 0.05) {
+              if (pct < pct_cutoff) {
                 df <- rbind(df, i[x, ])
                 pct <- pct + i[x, ]$V1
               } else{
@@ -353,7 +355,7 @@ heatmap_RWHN <- function(rwhn_output,
       df <- rwhn_flt[1, ]
       if (nrow(rwhn_flt) > 1) {
         for (x in 2:nrow(rwhn_flt)) {
-          if (pct < 0.05) {
+          if (pct < pct_cutoff) {
             df <- rbind(df, rwhn_flt[x, ])
             pct <- pct + rwhn_flt[x, ]$V1
           } else{
