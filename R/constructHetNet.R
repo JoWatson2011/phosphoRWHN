@@ -19,7 +19,7 @@
 #' @importFrom purrr pluck
 #' @importFrom AnnotationDbi select
 #' @importFrom org.Hs.eg.db org.Hs.eg.db
-#' @importFrom GO.db GO.db
+#' @importFrom GO.db GO.db GOBPCHILDREN
 #' @importFrom rlang .data
 #'
 #' @return A list containing edgelists and vertices of heterogeneous network
