@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(phosphoRWHN)
+#library(phosphoRWHN)
 library(tidyverse)
 ```
 #PhosphoRWHN
@@ -83,16 +83,16 @@ The function `constructHetNet` takes several parameters which are detailed in th
 
 The output is a list containing the edgelists and vertices of the multilayer network.
 
-```{r echo = F}
-set.seed(1)
+```{r}
+
 # 1. Construct the heterogeneous network
-hetNet <- constructHetNet(clustering = cl$cluster, modules = F)
+hetNet <- constructHetNet(clustering = cl$cluster, stringConf = 0.4, modules = T)
 
 # 2. Run RWHN, using sites in each cluster as seeds
 seed_l <- lapply(1:max(cl$cluster), function(i){
   c(names(cl$cluster[cl$cluster == i]))
 })
-
+set.seed(1)
 rwhn <- lapply(seed_l, function(s){
   calculateRWHN(hetNet = hetNet,
                 seeds = s, 
@@ -112,7 +112,163 @@ sighm <-
 
 sighm
 
-overrepresentationAnalysis(clustering = cl$cluster, vis = T)
+ora <- overrepresentationAnalysis(clustering = cl$cluster, RWHN_sig = sighm, vis = T)
+ora
 ```
+
+## Statistical Assessment
+
+To reproduce the Figure S2B in the paper, randomly permuted networks need to be generated.
+This can take some time depending on the size of your network.
+
+```{r eval = F}
+rwhn_random <- lapply(seed_l, function(s) {
+  calculateRWHN(
+    hetNet = hetNet,
+    seeds = s,
+    transitionProb = 0.7,
+    restart = 0.7,
+    eta_xy =  0.3,
+    eta_yz = 0.7,
+    eps = 1 / 10 ^ 12,
+    random = T
+  )
+})
+
+# Generate results lists of non-random data with different cut-offs
+sighm_1 <- heatmap_RWHN(
+  rwhn,
+  #, ylab = "GOBP Term",
+  colours = c(low = "#ffe6e8", high = "#f74451"),
+  removeCommon = T,
+  pct_cutoff = 0.01
+) %>%
+  .$data %>%
+  mutate(pct_cutoff = 0.01)
+sighm_5 <- heatmap_RWHN(
+  rwhn,
+  colours = c(low = "#ffe6e8", high = "#f74451"),
+  removeCommon = T,
+  pct_cutoff = 0.05
+) %>%
+  .$data %>%
+  mutate(pct_cutoff = 0.05)
+sighm_10 <- heatmap_RWHN(
+  rwhn,
+  #, ylab = "GOBP Term",
+  colours = c(low = "#ffe6e8", high = "#f74451"),
+  removeCommon = T,
+  pct_cutoff = 0.1
+) %>%
+  .$data %>%
+  mutate(pct_cutoff = 0.1)
+sighm_15 <- heatmap_RWHN(
+  rwhn,
+  #, ylab = "GOBP Term",
+  colours = c(low = "#ffe6e8", high = "#f74451"),
+  removeCommon = T,
+  pct_cutoff = 0.15
+) %>%
+  .$data %>%
+  mutate(pct_cutoff = 0.15)
+
+# Calculate p-values
+ptests <-
+  lapply(1:length(seed_l), function(i) {
+    lapply(v$v[v$layer == "func"], function(term) {
+      ranks <-  sapply(rwhn_random[[i]],
+                       function(x)
+                         ifelse(term %in% x$name, x$rank[x$name == term], NA))
+      
+      if (all(is.na(ranks))) {
+        return(data.frame())
+      }
+      
+      true_rank <- rwhn[[i]]$rank[rwhn[[i]]$name == term]
+      t_p <- t.test(ranks, mu = true_rank)$p.value
+      t_padj <- p.adjust(t_p, "fdr")
+      mann_p <- wilcox.test(ranks, mu = true_rank)$p.value
+      mann_padj <- p.adjust(mann_p, "fdr")
+      
+      res <- data.frame(term,
+                        true_rank,
+                        true_prob =  rwhn[[i]]$V1[rwhn[[i]]$name == term],
+                        t_p,
+                        t_padj,
+                        mann_p,
+                        mann_padj)
+      return(res)
+    }) %>%
+      bind_rows() %>%
+      mutate(
+        sig_t = ifelse(t_padj < 0.05, T, F),
+        sig_mann = ifelse(mann_padj < 0.05, T, F),
+        insighm_1 = ifelse(term %in% sighm_1[sighm_1$seed == i, ]$name, T, F),
+        insighm_5 = ifelse(term %in% sighm_5[sighm_5$seed == i, ]$name, T, F),
+        insighm_10 = ifelse(term %in% sighm_10[sighm_10$seed == i, ]$name, T, F),
+        insighm_15 = ifelse(term %in% sighm_15[sighm_15$seed == i, ]$name, T, F),
+        cluster = i
+      ) %>%
+      arrange(true_rank)
+  }) %>%
+  bind_rows()
+
+# Visualise
+mannwhitney_hm <- ptests %>%
+  pivot_longer(
+    c(sig_mann, insighm_1, insighm_5,
+      insighm_10, insighm_15),
+    names_to = "test",
+    values_to = "p"
+  ) %>%
+  ggplot(aes(
+    x = factor(
+      test,
+      levels = c(
+        "sig_mann",
+        "insighm_1",
+        "insighm_5",
+        "insighm_10",
+        "insighm_15"
+      )
+    ),
+    y = term,
+    fill = p
+  )) +
+  geom_tile() +
+  scale_x_discrete(
+    name = "",
+    labels = c("Mann Whitney-U\n< 0.05",
+               "1%",
+               "5%",
+               "10%",
+               "15%")
+  ) +
+  xlab("GOBP Term") +
+  scale_fill_manual(name = "",
+                    values = c("TRUE" = "#1ecbe1", "FALSE" = "#E1341E")) +
+  facet_wrap( ~ cluster, nrow = 1) +
+  theme(
+    panel.background = element_blank(),
+    plot.background = element_blank(),
+    axis.title = element_text(size = 5),
+    axis.text.y = element_text(size = 5),
+    axis.text.x = element_text(
+      size = 5,
+      angle = 45,
+      hjust = 1
+    ),
+    legend.key.height = unit(0.25, "cm"),
+    legend.key.width = unit(0.25, "cm"),
+    legend.text = element_text(size = 5),
+    plot.margin = margin(0, 0, 0, 0, "cm"),
+    legend.margin = margin(0, 0, 0, 0, "cm")
+  )
+
+
+mannwhitney_hm
+
+```
+
 
 
