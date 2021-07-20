@@ -46,10 +46,10 @@ simplifyGO <- function(GOID, highFreqTerms, semData) {
     for (i in 1:nrow(semSim)) {
       Var1 <- semSim[i, "Var1"]
       Var2 <- semSim[i, "Var2"]
-      if (Var2 %in% as.list(GOBPCHILDREN)[[Var1]]) {
+      if (Var2 %in% as.list(GO.db::GOBPCHILDREN)[[Var1]]) {
         remove <- c(remove, Var2)
         next
-      } else if (Var1 %in% as.list(GOBPCHILDREN)[[Var2]])
+      } else if (Var1 %in% as.list(GO.db::GOBPCHILDREN)[[Var2]])
         remove <- c(remove, Var1)
       next
     }
