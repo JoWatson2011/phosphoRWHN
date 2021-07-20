@@ -79,7 +79,7 @@ The function `constructHetNet` takes several parameters which are detailed in th
 
 The output is a list containing the edgelists and vertices of the multilayer network.
 
-```{r}
+```{r eval = F}
 
 # 1. Construct the heterogeneous network
 hetNet <- constructHetNet(clustering = cl$cluster, stringConf = 0.4, modules = T)
