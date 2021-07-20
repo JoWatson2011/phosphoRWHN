@@ -209,7 +209,7 @@ constructHetNet <- function(clustering, phosphoData = NULL,
 
       enrichedTerms <- if(modules){
         el <- prot %>%
-          dplyr::filter(.data$prot %in% cl_prots & .data$prot %in% cl_prots) %>%
+          dplyr::filter(.data$prot1 %in% cl_prots & .data$prot2 %in% cl_prots) %>%
           dplyr::select(2:3) %>%
           na.omit()
         nw <- igraph::graph_from_data_frame(el, directed = F) %>%
