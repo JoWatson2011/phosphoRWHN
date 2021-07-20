@@ -228,6 +228,10 @@ constructHetNet <- function(clustering, phosphoData = NULL,
                                       enrichrLib = enrichrLib,
                                       pval = pval)
 
+          if(nrow(enrichedTerms) == 0 ){
+            enrichedTerms <- data.frame()
+          }
+
           return(enrichedTerms)
         }) %>%
           dplyr::bind_rows()
