@@ -18,10 +18,6 @@ knitr::opts_chunk$set(
 library(phosphoRWHN)
 library(tidyverse)
 ```
-#PhosphoRWHN
-Phosphoproteomics data ....
-PhosphoRWHN addresses the problem, by providing a systems level analysis method for assigning potential functions to phosphorylated sites. Our manuscript on this work is described [here](www.biorxiv.com)
-
 
 ## Data Preparation
 
