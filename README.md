@@ -4,7 +4,7 @@ A method to infer the function of individual phosphorylation sites based on phos
 # To install package
 
 Run the following in an R session:
-`devtools::install_github("JoWatson2011/phosphoRWHN")`
+`devtools::install_github("JoWatson2011/phosphoRWHN",  build_vignettes = T)`
 
 The [Bioconductor](https://www.Bioconductor.org) packages `org.Hs.eg.db`, `GOSemSim`, `GO.db`, `AnnotationDbi` are also required and may need installing separately.
 
