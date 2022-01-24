@@ -20,74 +20,82 @@ overrepresentationAnalysis <- function(clustering,
                                        database = "GO_Biological_Process_2018",
                                        simplify = T,
                                        vis = F,
-                                       colours = c(low = "#439981", high = "#b2d4cd"),
+                                       colours = c(low = "#439981",
+                                                   high = "#b2d4cd"),
                                        RWHN_sig = NULL
-                                       ){
+){
 
+  clSeq <- unique(clustering)[order(unique(clustering))]
 
-  enrichedTerms <- lapply(unique(clustering)[order(unique(clustering))], function(i){
-    ids <- names(clustering[clustering == i ] )
-    cl_prots <- unique(gsub("_.*", "", ids))
-    cl_prots <- cl_prots[cl_prots != ""]
+  eTerms <- lapply(clSeq,
+                   function(i){
+                     ids <- names(clustering[clustering == i ] )
+                     cl_prots <- unique(gsub("_.*", "", ids))
+                     cl_prots <- cl_prots[cl_prots != ""]
 
-    enriched <- getEnrichr(cl_prots, database, 0.05) %>%
-      dplyr::mutate(cluster = i)
+                     enriched <- getEnrichr(cl_prots,
+                                            database,
+                                            0.05) %>%
+                       dplyr::mutate(cluster = i)
 
-    return(enriched)
-  }) %>%
+                     return(enriched)
+                   }) %>%
     dplyr::bind_rows()
 
   if(grepl("GO_", database)){
-    enrichedTerms <-  enrichedTerms %>%
+    eTerms <-  eTerms %>%
       tidyr::separate(.data$Term,
-               into = c("Term", "GOID"),
-               sep = " \\(",
-               extra = "drop") %>%
+                      into = c("Term", "GOID"),
+                      sep = " \\(",
+                      extra = "drop") %>%
       dplyr::mutate(GOID = sub("\\)",
-                        "",
-                        .data$GOID))
+                               "",
+                               .data$GOID))
   }
 
 
   if(grepl("GO_Biological_Process", database) & simplify){
 
-    enrichedTerms_flt <- lapply(unique(clustering)[order(unique(clustering))],
-                                function(i){
-      df <- enrichedTerms[enrichedTerms$cluster == i,]
+    ont <-  ifelse(grepl("Biological", database),"BP",
+                   ifelse(grepl("Molecular", database),"MF",
+                          ifelse(grepl("Cellular", database), "CC", NA
+                    )
+             )
+    )
 
-      hsGO <- suppressMessages(
-        GOSemSim::godata('org.Hs.eg.db',
-                         ont = ifelse(
-                           grepl("Biological", enrichrLib),
-                           "BP",
-                           ifelse(grepl("Molecular", enrichrLib), "MF",
-                                  ifelse(grepl(
-                                    "Cellular", enrichrLib
-                                  ), "CC",
-                                  NA))
-                         ),
-                         computeIC=FALSE
-        )
-      )
+    eTermsFlt <- lapply(clSeq,
+                        function(i){
+                          df <- eTerms[eTerms$cluster == i,]
 
-      keepID <- simplifyGO(GOID = df$GOID, highFreqTerms, hsGO)
+                          hsGO <- suppressMessages(
+                            GOSemSim::godata('org.Hs.eg.db',
+                                             ont = ont,
+                                             computeIC=FALSE
+                            )
+                          )
 
-      df_flt <- df %>%
-        dplyr::filter(.data$GOID %in% keepID) %>%
-        dplyr::arrange(dplyr::desc(.data$Adjusted.P.value))
-      if(nrow(df_flt) > 0){
-        df_flt <- dplyr::mutate(df_flt, rank = 1:n())
-      }
-      return(df_flt)
-    }) %>%
+                          keepID <- simplifyGO(GOID = df$GOID, hsGO)
+
+                          df_flt <- df %>%
+                            dplyr::filter(.data$GOID %in% keepID) %>%
+                            dplyr::arrange(
+                              dplyr::desc(.data$Adjusted.P.value)
+                              )
+                          if(nrow(df_flt) > 0){
+                            df_flt <- dplyr::mutate(df_flt, rank = 1:n())
+                          }
+                          return(df_flt)
+                        }) %>%
       bind_rows() %>%
       dplyr::mutate(V1 = signif(.data$Adjusted.P.value, digits = 2),
-             name = factor(.data$Term, unique(.data$Term)))
+                    name = factor(.data$Term, unique(.data$Term)))
 
   } else {
 
-    enrichedTerms_flt <- lapply(unique(clustering)[order(unique(clustering))], function(i){
-      df <- enrichedTerms[enrichedTerms$cluster ==i, c("Term", "Adjusted.P.value", "cluster")] %>%
+    eTermsFlt <- lapply(clSeq, function(i){
+      df <- eTerms[eTerms$cluster ==i, c("Term",
+                                         "Adjusted.P.value",
+                                         "cluster")] %>%
         dplyr::arrange(desc(.data$Adjusted.P.value))
 
       if(nrow(df) > 0){
@@ -103,24 +111,30 @@ overrepresentationAnalysis <- function(clustering,
   }
 
   if(!is.null(RWHN_sig)){
-    enrichedTerms_flt$Term <- tolower(enrichedTerms_flt$Term)
-    enrichedTerms_flt <- merge(enrichedTerms_flt,RWHN_sig$data[,c("name", "seed")],
-                               by.x = "Term", by.y = "name", all.x = T)
-    enrichedTerms_flt$rwhn <- ifelse(enrichedTerms_flt$cluster == enrichedTerms_flt$seed, T, NA)
-    enrichedTerms_flt <- dplyr::select(enrichedTerms_flt, -.data$seed) %>%  unique()
+    eTermsFlt$Term <- tolower(eTermsFlt$Term)
+    eTermsFlt <- merge(eTermsFlt,RWHN_sig$data[,c("name", "seed")],
+                       by.x = "Term", by.y = "name", all.x = T)
+    eTermsFlt$rwhn <- ifelse(eTermsFlt$cluster == eTermsFlt$seed, T, NA)
+    eTermsFlt <- dplyr::select(eTermsFlt, -.data$seed) %>%  unique()
   }
 
   if(vis == T){
-    gg <- ggplot2::ggplot(enrichedTerms_flt,
+    gg <- ggplot2::ggplot(eTermsFlt,
                           ggplot2::aes(y = .data$name,
                                        x = as.factor(.data$cluster)
                           )
     ) +
-      ggplot2::geom_tile(ggplot2::aes(fill = .data$Adjusted.P.value), color = "white") +
-      ggplot2::scale_fill_gradient(breaks = seq(0, 0.05, 0.01), limits = c(0, 0.05),
-                                   low = colours[1], high = colours[2]) +
+      ggplot2::geom_tile(
+        ggplot2::aes(fill = .data$Adjusted.P.value),
+        color = "white") +
+      ggplot2::scale_fill_gradient(
+        breaks = seq(0, 0.05, 0.01),
+        limits = c(0, 0.05),
+        low = colours[1],
+        high = colours[2]) +
       ggplot2::guides(color = FALSE,
-                      fill = ggplot2::guide_colourbar(title="FDR", reverse = T)) +
+                      fill = ggplot2::guide_colourbar(title="FDR",
+                                                      reverse = T)) +
       ggplot2::theme(legend.key.size = ggplot2::unit(.25, "cm"),
                      legend.title = ggplot2::element_text(size = 5),
                      legend.text = ggplot2::element_text(size = 5),
@@ -138,10 +152,11 @@ overrepresentationAnalysis <- function(clustering,
 
     if(!is.null(RWHN_sig)){
       gg <- gg +
-        ggplot2::geom_point(ggplot2::aes(shape = .data$rwhn), show.legend = F)
+        ggplot2::geom_point(ggplot2::aes(shape = .data$rwhn),
+                            show.legend = F)
     }
   }else{
-    return(enrichedTerms_flt)
+    return(eTermsFlt)
   }
 
 }

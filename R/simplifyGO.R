@@ -3,13 +3,14 @@
 #' https://github.com/soulj/SkeletalVis-Pipeline/blob/master/src/SYBIL%20Systems%20Biology/GOEnrichment.R
 #'
 #'
-#' @param GOID
-#' @param simplifyData
-#' @import GO.db
-#' @return
-#'
-#' @examples
-simplifyGO <- function(GOID, highFreqTerms, semData) {
+#' @param GOID List of GOID's to simplify
+#' @param semData output from GOSemSim::godata
+#' @importFrom GO.db GOBPCHILDREN
+#' @importFrom GOSemSim goSim
+#' @importFrom dplyr filter
+#' @return vector of reduced GO terms
+
+simplifyGO <- function(GOID, semData) {
   semSim <- expand.grid(unique(GOID),
                         unique(GOID), stringsAsFactors = F) %>%
     dplyr::filter(.data$Var1 != .data$Var2)

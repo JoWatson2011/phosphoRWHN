@@ -2,13 +2,18 @@
 #'
 #'
 #' @param genes character vector of HGNC symbols
-#' @param enrichrLib EnrichR library to use; see https://maayanlab.cloud/Enrichr/#stats
+#' @param enrichrLib EnrichR library to use;
 #' @param pval enrichment pvalue cut off
+#'
+#' @description
+#' see https://maayanlab.cloud/Enrichr/#stats
+#' for EnrichR libraries
 #'
 #' @importFrom httr GET POST http_error
 #' @importFrom dplyr filter
+#' @importFrom utils read.table
 #'
-#' @return
+#' @return dataframe; enrichR results
 #'
 getEnrichr <- function(genes, enrichrLib, pval) {
 
@@ -21,7 +26,7 @@ getEnrichr <- function(genes, enrichrLib, pval) {
     stop(
       sprintf(
         "EnrichR POST API request failed [%s]",
-        status_code(STRING_api_post)
+        status_code(temp)
       ),
       call. = F
     )
@@ -40,7 +45,7 @@ getEnrichr <- function(genes, enrichrLib, pval) {
     stop(
       sprintf(
         "EnrichR POST API request failed [%s]",
-        status_code(STRING_api_post)
+        status_code(r)
       ),
       call. = F
     )
@@ -48,7 +53,7 @@ getEnrichr <- function(genes, enrichrLib, pval) {
   r <- gsub("&#39;", "'", intToUtf8(r$content))
   tc <- textConnection(r)
   enriched <-
-    read.table(
+    utils::read.table(
       tc,
       sep = "\t",
       header = TRUE,
@@ -57,7 +62,8 @@ getEnrichr <- function(genes, enrichrLib, pval) {
     )
 
   if(nrow(enriched) > 0){
-    enriched <- dplyr::filter(enriched, .data$Adjusted.P.value <= pval)
+    enriched <- dplyr::filter(enriched,
+                              .data$Adjusted.P.value <= pval)
   }
 
   return(enriched)

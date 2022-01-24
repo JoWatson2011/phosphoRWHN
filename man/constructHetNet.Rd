@@ -2,24 +2,28 @@
 % Please edit documentation in R/constructHetNet.R
 \name{constructHetNet}
 \alias{constructHetNet}
-\title{Title}
+\title{Construct Heterogeneous network}
 \usage{
 constructHetNet(
   clustering,
   phosphoData = NULL,
   enrichrLib = "GO_Biological_Process_2018",
-  stringConf = 0.4,
+  stringConf = c(0.4, 0.7),
   modules = T,
   pval = 0.05,
   simplify = T
 )
 }
 \arguments{
-\item{clustering}{A named vector; names correspond to sites in format \emph{Gene name}_\emph{AminoAcid+Position} (e.g. MAPK1_T185), values correspond to cluster}
+\item{clustering}{A named vector; names correspond to sites
+in format \emph{Gene name}_\emph{AminoAcid+Position} (e.g. MAPK1_T185), values correspond to cluster}
 
-\item{phosphoData}{Optional; data frame with IDs in format \emph{Gene name}_\emph{AminoAcid+Position} (e.g. MAPK1_T185) in column 1, quantitative values in subsequent columns}
+\item{phosphoData}{Optional; data frame with IDs in format
+\emph{Gene name}_\emph{AminoAcid+Position} (e.g. MAPK1_T185) in column 1,
+quantitative values in subsequent columns}
 
-\item{enrichrLib}{Library to extract functional annotations on. See https://maayanlab.cloud/Enrichr/#stats}
+\item{enrichrLib}{Library to extract functional annotations on.
+See https://maayanlab.cloud/Enrichr/#stats}
 
 \item{stringConf}{numeric; value between 0 and 1, definining confidence of STRING interactions for the formation of the protein layer}
 
@@ -33,5 +37,11 @@ constructHetNet(
 A list containing edgelists and vertices of heterogeneous network
 }
 \description{
-Title
+Construct Heterogeneous network
+}
+\examples{
+cl <- c("MAPK1_T185" = 1, "MAPK3_T202" = 1,
+        "RAF1_S338" = 2, "RAF1_T491" = 2)
+constructHetNet(cl)
+
 }

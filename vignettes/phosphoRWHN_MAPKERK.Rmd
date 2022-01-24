@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(phosphoRWHN)
-library(tidyverse)
+library(dplyr)
 ```
 
 ## Data Preparation
@@ -47,7 +47,7 @@ model
 ```
 
 In this case we are going to use the `mfuzz()` function from the *Mfuzz* package to cluster the data. The data can be clustered in any way. A discussion on clustering methods for phosphoproteomicscan be found [here](www.google.com)
-```{r}
+```{r eval = F}
 library(Mfuzz)
 
 set.seed(1)

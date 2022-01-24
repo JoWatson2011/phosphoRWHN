@@ -2,7 +2,7 @@
 #'
 #' @param hetNet List; output of constructHetNet()
 #' @param transMat List; output of calculateTransitionMatrix()
-#' @param vertices Data frame; vertices in heterogeneous network, as containined in output of constructHetNet()
+#' @param vertices Data frame; vertices in heterogeneous network, as contained in output of constructHetNet()
 #' @param seeds Character vector of seed nodes
 #' @param transitionProb Integer; transition probability
 #' @param restart Integer; restart probability
@@ -10,6 +10,7 @@
 #' @param random Logical; randomly permute edges? For control cases
 #' @param eta_xy Integer; weighting on protein layer
 #' @param eta_yz Integer; weighting on function layer
+#' @param filterFunctions Remove functional annotations that are always ranked in the same position
 #' **For visualisation:**
 #' @param rwhn_output output of calculateRWHN() (or getRWHN())
 #' @param database character; name of annotation database
@@ -36,7 +37,8 @@ calculateRWHN <- function(hetNet,
                           random = F,
                           filterFunctions = T) {
 
-  if(class(hetNet) != "list" & all(names(hetNet) %in% c("v", "edgelists"))){
+  if(class(hetNet) != "list" &
+     all(names(hetNet) %in% c("v", "edgelists"))){
     stop("hetNet must be output from constructHetNet()")
   }
 
@@ -74,7 +76,7 @@ calculateRWHN <- function(hetNet,
                                               name = c(unique(i$from),
                                                        unique(i$to))
                                             )
-                                            )
+          )
           bimap_random <- bipartite.mapping(randomnw)
           mat <- get.incidence(
             randomnw,
@@ -82,20 +84,7 @@ calculateRWHN <- function(hetNet,
             attr=NULL,
             names=TRUE,
             sparse=T
-            )
-          # #randomnw <- igraph::rewire(nw, each_edge(1))
-          # dat <- as_data_frame(nw)
-          # dat$to <- sample(unique(dat$to), size = nrow(dat),replace = T)
-          # random_nw <- graph_from_data_frame(dat, directed = F)
-          #
-          # bimap_random <- igraph::bipartite.mapping(randomnw)
-          # mat <- igraph::get.incidence(
-          #   randomnw,
-          #   types = bimap_random$type,
-          #   attr = NULL,
-          #   names = TRUE,
-          #   sparse = T
-          # )
+          )
         } else{
           mat <- igraph::get.incidence(
             nw,
@@ -137,8 +126,8 @@ calculateRWHN <- function(hetNet,
 
   if(filterFunctions){
     rwhn <- rwhn %>%
-    dplyr::filter(.data$name %in% vertices[vertices$layer == "func", ]$v) %>%
-    dplyr::mutate(rank = 1:n())
+      dplyr::filter(.data$name %in% vertices[vertices$layer == "func", ]$v) %>%
+      dplyr::mutate(rank = 1:n())
   }
 
   return(rwhn)
@@ -171,7 +160,11 @@ calculateTransitionMatrix <-
 
     y_tp <- inter_tm(
       inter = hetNet[["y"]],
-      intra_names = unique(c(colnames(hetNet[["xy"]]), colnames(hetNet[["zy"]]))),
+      intra_names = unique(
+        c(colnames(hetNet[["xy"]]),
+          colnames(hetNet[["zy"]])
+        )
+      ),
       transitionProb = transitionProb
     )
 
@@ -205,21 +198,20 @@ calculateTransitionMatrix <-
     zy_tp <-
       zy_tp[rownames(zy_tp)[rownames(zy_tp) %in% rownames(z_tp)], ]
 
-    # tmp1 <- cbind(x_tp, xy_tp[rownames(x_tp), colnames(y_tp), drop = F], top0)
-    # tmp2 <- cbind(yx_tp[rownames(y_tp), colnames(x_tp), drop = F], y_tp, yz_tp[rownames(y_tp), colnames(z_tp), drop = F])
-    # tmp3 <- cbind(btm0, zy_tp[rownames(z_tp), colnames(y_tp), drop = F], z_tp)
     tmp1 <- cbind(x_tp, xy_tp, top0)
     tmp2 <- cbind(yx_tp, y_tp, yz_tp)
     tmp3 <- cbind(btm0, zy_tp, z_tp)
 
     M1 <- rbind(tmp1, tmp2, tmp3)
 
-    return(list(
-      M1 = M1,
-      x_tp = x_tp,
-      y_tp = y_tp,
-      z_tp = z_tp
-    ))
+    return(
+      list(
+        M1 = M1,
+        x_tp = x_tp,
+        y_tp = y_tp,
+        z_tp = z_tp
+      )
+    )
   }
 
 #' @export
@@ -243,7 +235,9 @@ getRWHN <- function(transMat,
   probabilityVector <- c(seedScores$Score,
                          rep.int((1 / nrow(M1) * eta_xy),
                                  nrow(y)), rep.int((1 / nrow(M1) * eta_yz),
-                                                   nrow(z)))
+                                                   nrow(z)
+                                                   )
+                         )
 
   iter <- 0
   p0 <- probabilityVector
@@ -302,17 +296,10 @@ heatmap_RWHN <- function(rwhn_output,
         color = ifelse(.data$rank_dif == 0, T, NA),
         V1 = signif(.data$V1, digits = 2)
       ) %>%
-      dplyr::arrange(desc(.data$V1))# %>%
-      #filter(rank_dif > (0.05 / max(rank_dif))) %>%
+      dplyr::arrange(desc(.data$V1))
 
-      # {
-      #   if (removeCommon)
-      #
-      #   else
-      #     .data
-      # } %>%
-
-    if(removeCommon){# Filter terms that appear in the same position in all conditions
+    if(removeCommon){
+      # Filter terms that appear in the same position in all conditions
       rwhn_flt <- dplyr::filter(rwhn_flt, .data$rank_dif > 1)
     }
 
@@ -322,7 +309,7 @@ heatmap_RWHN <- function(rwhn_output,
       sapply(function(i) {
         if (nrow(i > 0)) {
           pct <-
-            i[1, ]$V1                             # Filter top 5% of terms ( with a messy loop!!)
+            i[1, ]$V1
           df <- i[1, ]
           if (nrow(i) > 1) {
             for (x in 2:nrow(i)) {
@@ -351,7 +338,7 @@ heatmap_RWHN <- function(rwhn_output,
 
     if (nrow(rwhn_flt > 0)) {
       pct <-
-        rwhn_flt[1, ]$V1                             # Filter top 5% of terms ( with a messy loop!!)
+        rwhn_flt[1, ]$V1
       df <- rwhn_flt[1, ]
       if (nrow(rwhn_flt) > 1) {
         for (x in 2:nrow(rwhn_flt)) {
@@ -372,9 +359,15 @@ heatmap_RWHN <- function(rwhn_output,
   }
 
   sighm <-
-    ggplot2::ggplot(rwhn_flt, ggplot2::aes(x = as.factor(.data$seed),
-                                           y = reorder(.data$name, .data$rank))) +
-    ggplot2::geom_tile(ggplot2::aes(fill = .data$rank), colour = "white") +
+    ggplot2::ggplot(rwhn_flt,
+                    ggplot2::aes(x = as.factor(.data$seed),
+                                 y = reorder(.data$name, .data$rank)
+                    )
+    ) +
+    ggplot2::geom_tile(ggplot2::aes(
+      fill = .data$rank
+    ),
+    colour = "white") +
     ggplot2::scale_fill_gradient(
       breaks = seq(
         from = 1,
@@ -385,7 +378,10 @@ heatmap_RWHN <- function(rwhn_output,
       high = colours[2]
     ) +
     ggplot2::guides(color = FALSE,
-                    fill =  ggplot2::guide_colourbar(title = "Rank", reverse = T)) +
+                    fill =  ggplot2::guide_colourbar(
+                      title = "Rank",
+                      reverse = T)
+                    ) +
     ggplot2::xlab("Seed nodes") +
     ggplot2::ylab(database) +
     ggplot2::theme(
@@ -402,9 +398,6 @@ heatmap_RWHN <- function(rwhn_output,
 
   return(sighm)
 }
-
-
-
 
 ### -- Helper functions
 

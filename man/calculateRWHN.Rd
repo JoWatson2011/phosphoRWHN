@@ -15,7 +15,8 @@ calculateRWHN(
   eta_xy,
   eta_yz,
   eps = 1/10^6,
-  random = F
+  random = F,
+  filterFunctions = T
 )
 
 calculateTransitionMatrix(transitionProb, hetNet, vertices)
@@ -26,7 +27,8 @@ heatmap_RWHN(
   rwhn_output,
   database = "",
   colours = c(low = "#e6e4f8", high = "#46009e"),
-  removeCommon = T
+  removeCommon = T,
+  pct_cutoff = 0.05
 )
 }
 \arguments{
@@ -40,14 +42,16 @@ heatmap_RWHN(
 
 \item{eta_xy}{Integer; weighting on protein layer}
 
-\item{eta_yz}{Integer; weighting on function layer
-\strong{For visualisation:}}
+\item{eta_yz}{Integer; weighting on function layer}
 
 \item{eps}{Integer; steady state defined by distance between p0 and p1}
 
 \item{random}{Logical; randomly permute edges? For control cases}
 
-\item{vertices}{Data frame; vertices in heterogeneous network, as containined in output of constructHetNet()}
+\item{filterFunctions}{Remove functional annotations that are always ranked in the same position
+\strong{For visualisation:}}
+
+\item{vertices}{Data frame; vertices in heterogeneous network, as contained in output of constructHetNet()}
 
 \item{transMat}{List; output of calculateTransitionMatrix()}
 
@@ -58,6 +62,8 @@ heatmap_RWHN(
 \item{colours}{character vector of length 2 with colours for scale}
 
 \item{removeCommon}{logical; if rwhn_output is a list, remove functions ranked at the same position in all cases. This is useful for removing noise.}
+
+\item{pct_cutoff}{numeric, default 0.05; top terms to be included in results output, as percentage.}
 }
 \value{
 A data frame of ranked nodes from the functional layer

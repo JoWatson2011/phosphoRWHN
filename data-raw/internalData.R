@@ -56,12 +56,12 @@ path <- "" #PATH TO LOCAL DOWNLOAD OF STRING FILE
 # 9606.protein.links.detailed.v11.0.txt
 
 
-STRING_lowconf <- STRING_flt("data/9606.protein.links.detailed.v11.0.txt", 400)
-saveRDS(STRING_lowconf, "data/STRINGexpmtgene_lowconf.rds")
-STRING_highconf <- STRING_flt("data/9606.protein.links.detailed.v11.0.txt", 700)
-saveRDS(STRING_highconf, "data/STRINGexpmtgene_highconf.rds")
-
-
+#STRING_lowconf <- STRING_flt("data/9606.protein.links.detailed.v11.5.txt", 400)
+#saveRDS(STRING_lowconf, "data/STRINGexpmtgene_lowconf.rds")
+#STRING_highconf <- STRING_flt("data/9606.protein.links.detailed.v11.5.txt", 700)
+#saveRDS(STRING_highconf, "data/STRINGexpmtgene_highconf.rds")
+STRING_lowconf <- STRING_flt("~/../Downloads/9606.protein.links.detailed.v11.5.txt", 400)
+STRING_highconf <- STRING_flt("~/../Downloads/9606.protein.links.detailed.v11.5.txt", 700)
 ####
 # GO Similarities
 ####
@@ -95,16 +95,17 @@ highFreqTerms <- names(freq[freq>freqCutOff])
 #
 # pathwaySimilarities <- readr::read_tsv("all edges bma wang.txt",
 #                          col_names = c("sim", "func1", "func2")) %>%
-#   mutate(func1 = tolower(func1),
-#          func2 = tolower(func2)) %>%
-#   mutate(func1 = gsub("_", " ", func1),
-#          func2 = gsub("_", " ", func2)
-#   )
-#
+# mutate(func1 = tolower(func1),
+#        func2 = tolower(func2)) %>%
+#filter(sim >= 0.7) %>%
+# mutate(func1 = gsub("_", " ", func1),
+#        func2 = gsub("_", " ", func2)
+# )
+
 usethis::use_data(STRING_highconf,
                   STRING_lowconf,
                   highFreqTerms,
-                 # pathwaySimilarities,
+                  pathwaySimilarities,
                   internal = T,
                   overwrite = T)
 

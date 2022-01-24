@@ -9,13 +9,14 @@ getEnrichr(genes, enrichrLib, pval)
 \arguments{
 \item{genes}{character vector of HGNC symbols}
 
-\item{enrichrLib}{EnrichR library to use; see https://maayanlab.cloud/Enrichr/#stats}
+\item{enrichrLib}{EnrichR library to use;}
 
 \item{pval}{enrichment pvalue cut off}
 }
 \value{
-
+dataframe; enrichR results
 }
 \description{
-Get EnrichR results from API
+see https://maayanlab.cloud/Enrichr/#stats
+for EnrichR libraries
 }

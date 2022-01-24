@@ -6,13 +6,15 @@
 Based on code by Jamie Soul:
 https://github.com/soulj/SkeletalVis-Pipeline/blob/master/src/SYBIL\%20Systems\%20Biology/GOEnrichment.R}
 \usage{
-simplifyGO(GOID, simplifyData)
+simplifyGO(GOID, semData)
 }
 \arguments{
-\item{simplifyData}{}
+\item{GOID}{List of GOID's to simplify}
+
+\item{semData}{output from GOSemSim::godata}
 }
 \value{
-
+vector of reduced GO terms
 }
 \description{
 Remove semantically similar GO terms.
